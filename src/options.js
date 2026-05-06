@@ -3,7 +3,21 @@
 // before persisting host changes. Managed entries are admin-pushed via
 // chrome.storage.managed and rendered read-only.
 
-const { DEFAULT_CONFIG, hostEntryToMatchPattern } = self.BackrefConfig;
+const { DEFAULT_CONFIG, hostEntryToMatchPattern, parseHostEntry } =
+  self.BackrefConfig;
+
+function parseHostsCsv(text) {
+  return (text || "")
+    .split(",")
+    .map(s => s.trim().toLowerCase())
+    .filter(Boolean);
+}
+
+function ruleForStorage(r) {
+  const out = { regex: r.regex, template: r.template };
+  if (Array.isArray(r.hosts) && r.hosts.length > 0) out.hosts = [...r.hosts];
+  return out;
+}
 
 const els = {
   hostList: document.getElementById("host-list"),
@@ -104,10 +118,13 @@ function renderRules() {
     const node = els.ruleTemplate.content.firstElementChild.cloneNode(true);
     const regexInput = node.querySelector(".rule-regex");
     const templateInput = node.querySelector(".rule-template");
+    const hostsInput = node.querySelector(".rule-hosts");
     regexInput.value = rule.regex || "";
     templateInput.value = rule.template || "";
+    hostsInput.value = Array.isArray(rule.hosts) ? rule.hosts.join(", ") : "";
     regexInput.disabled = true;
     templateInput.disabled = true;
+    hostsInput.disabled = true;
     node.querySelector(".remove-rule").remove();
     node.appendChild(setManagedAttrs(node));
     els.ruleList.appendChild(node);
@@ -117,13 +134,18 @@ function renderRules() {
     const node = els.ruleTemplate.content.firstElementChild.cloneNode(true);
     const regexInput = node.querySelector(".rule-regex");
     const templateInput = node.querySelector(".rule-template");
+    const hostsInput = node.querySelector(".rule-hosts");
     regexInput.value = rule.regex;
     templateInput.value = rule.template;
+    hostsInput.value = Array.isArray(rule.hosts) ? rule.hosts.join(", ") : "";
     regexInput.addEventListener("input", () => {
       state.rules[idx].regex = regexInput.value;
     });
     templateInput.addEventListener("input", () => {
       state.rules[idx].template = templateInput.value;
+    });
+    hostsInput.addEventListener("input", () => {
+      state.rules[idx].hosts = parseHostsCsv(hostsInput.value);
     });
     node.querySelector(".remove-rule").addEventListener("click", () => {
       state.rules.splice(idx, 1);
@@ -228,6 +250,13 @@ function validateRules() {
     if (!r.template.includes("{id}")) {
       return `Template "${r.template}" is missing the {id} placeholder.`;
     }
+    if (Array.isArray(r.hosts)) {
+      for (const h of r.hosts) {
+        if (!parseHostEntry(h)) {
+          return `Rule "${r.regex}" has an invalid "Active on" host: ${h}`;
+        }
+      }
+    }
   }
   return null;
 }
@@ -238,9 +267,43 @@ async function save() {
     setStatus(err);
     return;
   }
+
+  // Auto-expand top-level Hosts to cover any per-rule "Active on" entries.
+  // Without this, a rule scoped to a host that isn't in Hosts would never fire,
+  // because the content script wouldn't be registered there.
+  let permissionWarning = null;
+  const referenced = new Set();
+  for (const r of state.rules) {
+    if (Array.isArray(r.hosts)) {
+      for (const h of r.hosts) referenced.add(h);
+    }
+  }
+  const newHosts = [...referenced].filter(
+    h => !state.hosts.includes(h) && !state.managed.hosts.includes(h)
+  );
+  if (newHosts.length > 0) {
+    const origins = newHosts.map(hostEntryToMatchPattern).filter(Boolean);
+    let granted = false;
+    try {
+      granted = await chrome.permissions.request({ origins });
+    } catch (e) {
+      setStatus(`Permission request failed: ${e.message}`);
+      return;
+    }
+    if (granted) {
+      for (const h of newHosts) {
+        if (!state.hosts.includes(h)) state.hosts.push(h);
+      }
+      renderHosts();
+    } else {
+      permissionWarning =
+        "Saved, but permission was denied for some hosts referenced by rules — those rules won't fire until you grant access.";
+    }
+  }
+
   // Persist only user fields. openInNewTab is omitted when policy-controlled.
   const config = {
-    rules: state.rules.map(r => ({ regex: r.regex, template: r.template })),
+    rules: state.rules.map(ruleForStorage),
     hosts: [...state.hosts]
   };
   if (state.managed.openInNewTab === null) {
@@ -249,7 +312,7 @@ async function save() {
     config.openInNewTab = state.openInNewTab;
   }
   await chrome.storage.sync.set({ config });
-  setStatus("Saved.");
+  setStatus(permissionWarning || "Saved.");
 }
 
 async function load() {
@@ -264,7 +327,11 @@ async function load() {
   // so we don't pre-fill duplicates of policy entries.
   if (user) {
     state.rules = Array.isArray(user.rules)
-      ? user.rules.map(r => ({ regex: r.regex || "", template: r.template || "" }))
+      ? user.rules.map(r => ({
+          regex: r.regex || "",
+          template: r.template || "",
+          hosts: Array.isArray(r.hosts) ? [...r.hosts] : []
+        }))
       : [];
     state.hosts = Array.isArray(user.hosts) ? [...user.hosts] : [];
     state.openInNewTab = user.openInNewTab !== false;
@@ -273,7 +340,7 @@ async function load() {
     state.hosts = [];
     state.openInNewTab = true;
   } else {
-    state.rules = DEFAULT_CONFIG.rules.map(r => ({ ...r }));
+    state.rules = DEFAULT_CONFIG.rules.map(r => ({ ...r, hosts: [] }));
     state.hosts = [...DEFAULT_CONFIG.hosts];
     state.openInNewTab = DEFAULT_CONFIG.openInNewTab;
   }
@@ -295,7 +362,7 @@ function setJsonError(msg) {
 
 function currentUserConfig() {
   return {
-    rules: state.rules.map(r => ({ regex: r.regex, template: r.template })),
+    rules: state.rules.map(ruleForStorage),
     openInNewTab:
       state.managed.openInNewTab !== null
         ? state.managed.openInNewTab
@@ -332,7 +399,8 @@ async function jsonImport() {
   const newRules = Array.isArray(parsed.rules)
     ? parsed.rules.map(r => ({
         regex: (r && r.regex) || "",
-        template: (r && r.template) || ""
+        template: (r && r.template) || "",
+        hosts: r && Array.isArray(r.hosts) ? [...r.hosts] : []
       }))
     : [];
   const newHosts = Array.isArray(parsed.hosts)
@@ -399,7 +467,7 @@ els.hostInput.addEventListener("keydown", e => {
   }
 });
 els.addRule.addEventListener("click", () => {
-  state.rules.push({ regex: "", template: "" });
+  state.rules.push({ regex: "", template: "", hosts: [] });
   renderRules();
 });
 els.save.addEventListener("click", save);

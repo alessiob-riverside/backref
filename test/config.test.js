@@ -1,7 +1,14 @@
 import { describe, it, expect } from "vitest";
 import config from "../src/config.js";
 
-const { mergeConfig, DEFAULT_CONFIG, parseHostEntry, hostEntryToMatchPattern } = config;
+const {
+  mergeConfig,
+  DEFAULT_CONFIG,
+  parseHostEntry,
+  hostEntryToMatchPattern,
+  urlMatchesHostEntry,
+  urlMatchesAnyHostEntry
+} = config;
 
 describe("mergeConfig", () => {
   it("falls back to DEFAULT_CONFIG when both sides are empty", () => {
@@ -173,5 +180,82 @@ describe("hostEntryToMatchPattern", () => {
   it("returns null for invalid entries", () => {
     expect(hostEntryToMatchPattern("not a host")).toBeNull();
     expect(hostEntryToMatchPattern("github.com/foo?x=1")).toBeNull();
+  });
+});
+
+describe("urlMatchesHostEntry", () => {
+  it("matches a URL against a bare hostname", () => {
+    expect(urlMatchesHostEntry("https://github.com/foo/bar", "github.com")).toBe(true);
+  });
+
+  it("rejects a URL on a different host", () => {
+    expect(urlMatchesHostEntry("https://gitlab.com/foo", "github.com")).toBe(false);
+  });
+
+  it("matches when URL path is under the entry's path", () => {
+    expect(
+      urlMatchesHostEntry("https://github.com/myorg/repo/issues", "github.com/myorg")
+    ).toBe(true);
+  });
+
+  it("matches when URL path equals the entry's path exactly", () => {
+    expect(
+      urlMatchesHostEntry("https://github.com/myorg", "github.com/myorg")
+    ).toBe(true);
+  });
+
+  it("does not match when URL path is a sibling, not a child", () => {
+    expect(
+      urlMatchesHostEntry("https://github.com/myorgFAKE", "github.com/myorg")
+    ).toBe(false);
+    expect(
+      urlMatchesHostEntry("https://github.com/other-org/repo", "github.com/myorg")
+    ).toBe(false);
+  });
+
+  it("is case-insensitive on hostname and path", () => {
+    expect(
+      urlMatchesHostEntry("https://GitHub.com/MyOrg/Repo", "github.com/myorg")
+    ).toBe(true);
+  });
+
+  it("ignores trailing slash and trailing star in entry", () => {
+    expect(
+      urlMatchesHostEntry("https://github.com/myorg/repo", "github.com/myorg/")
+    ).toBe(true);
+    expect(
+      urlMatchesHostEntry("https://github.com/myorg/repo", "github.com/myorg/*")
+    ).toBe(true);
+  });
+
+  it("returns false for invalid URL or entry", () => {
+    expect(urlMatchesHostEntry("not a url", "github.com")).toBe(false);
+    expect(urlMatchesHostEntry("https://github.com/", "not a host")).toBe(false);
+  });
+});
+
+describe("urlMatchesAnyHostEntry", () => {
+  it("returns true when entries is missing or empty (global)", () => {
+    expect(urlMatchesAnyHostEntry("https://github.com/foo", undefined)).toBe(true);
+    expect(urlMatchesAnyHostEntry("https://github.com/foo", null)).toBe(true);
+    expect(urlMatchesAnyHostEntry("https://github.com/foo", [])).toBe(true);
+  });
+
+  it("returns true when at least one entry matches", () => {
+    expect(
+      urlMatchesAnyHostEntry("https://github.com/myorg/repo", [
+        "linear.app",
+        "github.com/myorg"
+      ])
+    ).toBe(true);
+  });
+
+  it("returns false when no entry matches", () => {
+    expect(
+      urlMatchesAnyHostEntry("https://github.com/other/repo", [
+        "linear.app",
+        "github.com/myorg"
+      ])
+    ).toBe(false);
   });
 });
