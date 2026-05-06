@@ -1,0 +1,26 @@
+{
+  "name": "backref",
+  "version": "0.1.0",
+  "private": true,
+  "description": "Cross-browser extension that turns bug-tracker IDs on GitHub pages into links.",
+  "homepage": "https://github.com/alessiob-riverside/backref#readme",
+  "bugs": {
+    "url": "https://github.com/alessiob-riverside/backref/issues"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/alessiob-riverside/backref.git"
+  },
+  "license": "MIT",
+  "author": "Alessio Bazzica <alessio.bazzica@gmail.com>",
+  "scripts": {
+    "test": "vitest run",
+    "test:watch": "vitest"
+  },
+  "engines": {
+    "node": ">=20"
+  },
+  "devDependencies": {
+    "vitest": "^4.1.5"
+  }
+}

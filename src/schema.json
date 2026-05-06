@@ -1,0 +1,22 @@
+{
+  "type": "object",
+  "properties": {
+    "rules": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "properties": {
+          "regex": { "type": "string" },
+          "template": { "type": "string" }
+        }
+      }
+    },
+    "hosts": {
+      "type": "array",
+      "items": { "type": "string" }
+    },
+    "openInNewTab": { "type": "boolean" },
+    "lockRules": { "type": "boolean" },
+    "lockHosts": { "type": "boolean" }
+  }
+}

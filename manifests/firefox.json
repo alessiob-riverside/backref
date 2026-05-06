@@ -1,0 +1,38 @@
+{
+  "manifest_version": 3,
+  "name": "Backref",
+  "description": "Turn bug-tracker IDs in GitHub code comments, PR/issue descriptions and comments, and commit messages into clickable links.",
+  "version": "0.1.0",
+  "browser_specific_settings": {
+    "gecko": {
+      "id": "backref@yourdomain.example",
+      "strict_min_version": "128.0"
+    }
+  },
+  "icons": {
+    "16": "icons/icon-16.png",
+    "48": "icons/icon-48.png",
+    "128": "icons/icon-128.png"
+  },
+  "permissions": ["storage", "scripting"],
+  "host_permissions": ["*://github.com/*"],
+  "optional_host_permissions": ["*://*/*"],
+  "storage": {
+    "managed_schema": "src/schema.json"
+  },
+  "background": {
+    "scripts": ["src/config.js", "src/background.js"]
+  },
+  "options_ui": {
+    "page": "src/options.html",
+    "open_in_tab": true
+  },
+  "action": {
+    "default_title": "Backref — open settings",
+    "default_icon": {
+      "16": "icons/icon-16.png",
+      "48": "icons/icon-48.png",
+      "128": "icons/icon-128.png"
+    }
+  }
+}

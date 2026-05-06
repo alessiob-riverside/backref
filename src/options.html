@@ -1,0 +1,96 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <title>Backref — Options</title>
+    <link rel="stylesheet" href="options.css" />
+  </head>
+  <body>
+    <main>
+      <h1>Backref</h1>
+      <p class="muted">
+        Replace bug-tracker IDs in code comments, PR/issue descriptions and
+        comments, and commit messages with clickable links.
+      </p>
+
+      <section>
+        <h2>Hosts</h2>
+        <p class="muted">
+          Hostnames where the extension should run. Adding a host triggers a
+          Chrome permission prompt — you must accept it for the extension to
+          activate on that host. <code>github.com</code> works out of the box.
+        </p>
+        <ul id="host-list" class="chip-list" aria-label="Configured hosts"></ul>
+        <div class="row" id="host-input-row">
+          <input
+            type="text"
+            id="host-input"
+            placeholder="github.acme.com"
+            autocomplete="off"
+          />
+          <button id="add-host" type="button">Add host</button>
+        </div>
+        <p id="host-error" class="error" hidden></p>
+        <p id="host-policy-note" class="policy-note" hidden></p>
+      </section>
+
+      <section>
+        <h2>Link rules</h2>
+        <p class="muted">
+          Each rule has a regular expression and a link template. Use
+          <code>{id}</code> in the template to insert the matched text. The
+          whole match becomes the link text — capture groups are ignored. To
+          avoid partial matches inside identifiers, use word boundaries
+          (<code>\b</code>) in your regex.
+        </p>
+        <ul id="rule-list" class="rule-list" aria-label="Link rules"></ul>
+        <button id="add-rule" type="button">Add rule</button>
+        <p id="rule-policy-note" class="policy-note" hidden></p>
+      </section>
+
+      <section>
+        <h2>Behavior</h2>
+        <label class="row">
+          <input type="checkbox" id="open-in-new-tab" />
+          <span>Open links in a new tab</span>
+        </label>
+        <p id="behavior-policy-note" class="policy-note" hidden></p>
+      </section>
+
+      <footer>
+        <button id="save" type="button" class="primary">Save</button>
+        <span id="status" class="muted" role="status" aria-live="polite"></span>
+      </footer>
+    </main>
+
+    <template id="rule-template">
+      <li class="rule">
+        <div class="rule-fields">
+          <label>
+            <span>Regex</span>
+            <input type="text" class="rule-regex" spellcheck="false" />
+          </label>
+          <label>
+            <span>Link template</span>
+            <input type="text" class="rule-template" spellcheck="false" />
+          </label>
+        </div>
+        <button type="button" class="remove-rule" aria-label="Remove rule">
+          Remove
+        </button>
+      </li>
+    </template>
+
+    <template id="host-template">
+      <li class="chip">
+        <span class="host-name"></span>
+        <button type="button" class="remove-host" aria-label="Remove host">
+          ×
+        </button>
+      </li>
+    </template>
+
+    <script src="config.js"></script>
+    <script src="options.js"></script>
+  </body>
+</html>
