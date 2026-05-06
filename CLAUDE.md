@@ -65,11 +65,23 @@ After config changes, links update on the next page navigation; the storage list
 ```
 
 - `rules[].regex` is a JS regex source string. The whole match is the link text — capture groups are ignored. `{id}` in the template is replaced with the URL-encoded match.
-- `hosts` are bare hostnames, expanded to `*://<host>/*` match patterns. The default `github.com` is covered by manifest `host_permissions`; additional hosts go through `chrome.permissions.request` from the options page (must be a user gesture).
+- `hosts` are bare hostnames or hostname/path entries (e.g. `github.com`, `github.com/myorg`). `hostEntryToMatchPattern` in `src/config.js` normalizes them to `*://<host>/*` or `*://<host>/<path>/*` match patterns. The default `github.com` is covered by manifest `host_permissions`; additional hosts go through `chrome.permissions.request` from the options page (must be a user gesture). Path-scoped entries that fall under an already-granted host don't trigger a new prompt — `permissions.contains` is satisfied by the broader granted pattern.
 
 ## Managed storage (enterprise policy)
 
-For org-wide rollout, admins can push config via `chrome.storage.managed`. The schema is `src/schema.json` and the manifest declares it under `storage.managed_schema`. Top-level keys (NOT nested under `config`):
+For org-wide rollout, admins can push config via `chrome.storage.managed`. The schema is `src/schema.json`. **Browser asymmetry:**
+
+- **Chrome** declares the schema in the manifest (`storage.managed_schema`). Chrome validates admin-pushed JSON against it.
+- **Firefox** does NOT support `storage.managed_schema` in the manifest — including it produces a warning at install time. Firefox admins deploy a JSON file to an OS-level path keyed by the extension's `gecko.id`:
+  - macOS: `/Library/Application Support/Mozilla/ManagedStorage/<gecko-id>.json`
+  - Linux: `/etc/firefox/policies/managed-storage/<gecko-id>.json`
+  - Windows: registry `HKLM\Software\Mozilla\ManagedStorage\<gecko-id>`
+
+  The data shape is the same — the schema in `src/schema.json` is still the source of truth for what admins should write, it's just not declared in the manifest.
+
+The merge logic in `src/config.js` is browser-agnostic — `chrome.storage.managed.get()` works in both contexts (Firefox aliases `browser.storage.managed`).
+
+Top-level keys (NOT nested under `config`):
 
 ```js
 {

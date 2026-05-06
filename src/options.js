@@ -3,9 +3,7 @@
 // before persisting host changes. Managed entries are admin-pushed via
 // chrome.storage.managed and rendered read-only.
 
-const { DEFAULT_CONFIG } = self.BackrefConfig;
-
-const HOSTNAME_RE = /^[a-z0-9]([a-z0-9-]*[a-z0-9])?(\.[a-z0-9]([a-z0-9-]*[a-z0-9])?)+$/i;
+const { DEFAULT_CONFIG, hostEntryToMatchPattern } = self.BackrefConfig;
 
 const els = {
   hostList: document.getElementById("host-list"),
@@ -19,6 +17,11 @@ const els = {
   rulePolicyNote: document.getElementById("rule-policy-note"),
   openInNewTab: document.getElementById("open-in-new-tab"),
   behaviorPolicyNote: document.getElementById("behavior-policy-note"),
+  jsonText: document.getElementById("config-json"),
+  jsonImport: document.getElementById("json-import"),
+  jsonExport: document.getElementById("json-export"),
+  jsonCopyPolicy: document.getElementById("json-copy-policy"),
+  jsonError: document.getElementById("json-error"),
   save: document.getElementById("save"),
   status: document.getElementById("status"),
   ruleTemplate: document.getElementById("rule-template"),
@@ -68,10 +71,13 @@ function renderHosts() {
     node.querySelector(".remove-host").addEventListener("click", async () => {
       state.hosts = state.hosts.filter(h => h !== host);
       renderHosts();
-      try {
-        await chrome.permissions.remove({ origins: [`*://${host}/*`] });
-      } catch (_e) {
-        // ignore
+      const pattern = hostEntryToMatchPattern(host);
+      if (pattern) {
+        try {
+          await chrome.permissions.remove({ origins: [pattern] });
+        } catch (_e) {
+          // ignore
+        }
       }
     });
     els.hostList.appendChild(node);
@@ -178,8 +184,11 @@ async function addHost() {
   const raw = els.hostInput.value.trim().toLowerCase();
   setHostError("");
   if (!raw) return;
-  if (!HOSTNAME_RE.test(raw)) {
-    setHostError("Invalid hostname.");
+  const pattern = hostEntryToMatchPattern(raw);
+  if (!pattern) {
+    setHostError(
+      "Invalid host. Use a hostname (github.com) or hostname/path (github.com/myorg)."
+    );
     return;
   }
   if (state.hosts.includes(raw)) {
@@ -192,7 +201,7 @@ async function addHost() {
   }
   let granted = false;
   try {
-    granted = await chrome.permissions.request({ origins: [`*://${raw}/*`] });
+    granted = await chrome.permissions.request({ origins: [pattern] });
   } catch (e) {
     setHostError(`Permission request failed: ${e.message}`);
     return;
@@ -274,6 +283,114 @@ async function load() {
   renderBehavior();
 }
 
+function setJsonError(msg) {
+  if (!msg) {
+    els.jsonError.hidden = true;
+    els.jsonError.textContent = "";
+  } else {
+    els.jsonError.hidden = false;
+    els.jsonError.textContent = msg;
+  }
+}
+
+function currentUserConfig() {
+  return {
+    rules: state.rules.map(r => ({ regex: r.regex, template: r.template })),
+    openInNewTab:
+      state.managed.openInNewTab !== null
+        ? state.managed.openInNewTab
+        : !!els.openInNewTab.checked,
+    hosts: [...state.hosts]
+  };
+}
+
+function jsonExport() {
+  setJsonError("");
+  els.jsonText.value = JSON.stringify(currentUserConfig(), null, 2);
+  setStatus("Exported current user config.");
+}
+
+async function jsonImport() {
+  setJsonError("");
+  const text = els.jsonText.value.trim();
+  if (!text) {
+    setJsonError("Nothing to import — paste a config JSON first.");
+    return;
+  }
+  let parsed;
+  try {
+    parsed = JSON.parse(text);
+  } catch (e) {
+    setJsonError(`Invalid JSON: ${e.message}`);
+    return;
+  }
+  if (typeof parsed !== "object" || parsed === null) {
+    setJsonError("Top level must be a JSON object.");
+    return;
+  }
+
+  const newRules = Array.isArray(parsed.rules)
+    ? parsed.rules.map(r => ({
+        regex: (r && r.regex) || "",
+        template: (r && r.template) || ""
+      }))
+    : [];
+  const newHosts = Array.isArray(parsed.hosts)
+    ? parsed.hosts.filter(h => typeof h === "string")
+    : [];
+  const newOpenInNewTab =
+    typeof parsed.openInNewTab === "boolean" ? parsed.openInNewTab : true;
+
+  // Request permission for any host that's new and not already covered by
+  // managed policy. One batched prompt with all origins.
+  const newOrigins = newHosts
+    .filter(h => !state.hosts.includes(h) && !state.managed.hosts.includes(h))
+    .map(h => hostEntryToMatchPattern(h))
+    .filter(Boolean);
+  if (newOrigins.length > 0) {
+    let granted = false;
+    try {
+      granted = await chrome.permissions.request({ origins: newOrigins });
+    } catch (e) {
+      setJsonError(`Permission request failed: ${e.message}`);
+      return;
+    }
+    if (!granted) {
+      setJsonError(
+        "Permission denied for some hosts — they will be saved but won't activate until granted."
+      );
+    }
+  }
+
+  state.rules = newRules;
+  state.hosts = newHosts;
+  state.openInNewTab = newOpenInNewTab;
+  renderHosts();
+  renderRules();
+  renderBehavior();
+  setStatus("Imported. Click Save to persist.");
+}
+
+async function jsonCopyPolicy() {
+  setJsonError("");
+  const effective = await self.BackrefConfig.loadEffectiveConfig();
+  const policy = {
+    rules: effective.rules,
+    hosts: effective.hosts,
+    openInNewTab: effective.openInNewTab,
+    lockRules: false,
+    lockHosts: false
+  };
+  const json = JSON.stringify(policy, null, 2);
+  els.jsonText.value = json;
+  try {
+    await navigator.clipboard.writeText(json);
+    setStatus("Copied managed-policy JSON to clipboard.");
+  } catch (_e) {
+    setStatus("Managed-policy JSON shown in textarea (clipboard unavailable).");
+  }
+}
+
 els.addHost.addEventListener("click", addHost);
 els.hostInput.addEventListener("keydown", e => {
   if (e.key === "Enter") {
@@ -286,6 +403,9 @@ els.addRule.addEventListener("click", () => {
   renderRules();
 });
 els.save.addEventListener("click", save);
+els.jsonImport.addEventListener("click", jsonImport);
+els.jsonExport.addEventListener("click", jsonExport);
+els.jsonCopyPolicy.addEventListener("click", jsonCopyPolicy);
 
 // React to managed-policy updates while the options page is open.
 chrome.storage.onChanged.addListener((_changes, area) => {

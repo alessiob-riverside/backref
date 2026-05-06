@@ -15,17 +15,11 @@ if (typeof BackrefConfig === "undefined" && typeof importScripts === "function")
 const SCRIPT_ID = "ghst-content";
 const CONTENT_FILES = ["src/config.js", "src/content.js"];
 
-function hostsToMatches(hosts) {
-  return (hosts || [])
-    .map(h => h.trim())
-    .filter(Boolean)
-    .map(h => `*://${h}/*`);
-}
-
 async function grantedMatches(hosts) {
   const granted = [];
   for (const h of hosts || []) {
-    const origin = `*://${h}/*`;
+    const origin = self.BackrefConfig.hostEntryToMatchPattern(h);
+    if (!origin) continue;
     try {
       const ok = await chrome.permissions.contains({ origins: [origin] });
       if (ok) granted.push(origin);
@@ -36,7 +30,7 @@ async function grantedMatches(hosts) {
   return granted;
 }
 
-async function syncContentScripts() {
+async function doSync() {
   const config = await BackrefConfig.loadEffectiveConfig();
 
   // Always unregister first so removals take effect.
@@ -63,6 +57,30 @@ async function syncContentScripts() {
   } catch (e) {
     console.error("[backref] failed to register content scripts:", e);
   }
+}
+
+// Serialize syncs and coalesce overlapping requests. Multiple events
+// (onInstalled, storage.onChanged, permissions.onAdded/Removed) can fire
+// concurrently; without serialization the unregister/register pair races
+// and the second register fails with "Duplicate script ID".
+let syncInFlight = null;
+let syncPending = false;
+function syncContentScripts() {
+  if (syncInFlight) {
+    syncPending = true;
+    return syncInFlight;
+  }
+  syncInFlight = (async () => {
+    try {
+      do {
+        syncPending = false;
+        await doSync();
+      } while (syncPending);
+    } finally {
+      syncInFlight = null;
+    }
+  })();
+  return syncInFlight;
 }
 
 chrome.runtime.onInstalled.addListener(async () => {
