@@ -48,6 +48,38 @@
     return Array.isArray(x) ? x : [];
   }
 
+  // Accepts a bare hostname or hostname/path. Path component is anything that
+  // isn't a query/fragment/whitespace. Examples that pass:
+  //   github.com         github.com/myorg         github.com/myorg/repo/*
+  // Examples that fail: github.com?x=1   github.com#x   github.com/with space
+  const HOST_ENTRY_RE =
+    /^[a-z0-9]([a-z0-9-]*[a-z0-9])?(\.[a-z0-9]([a-z0-9-]*[a-z0-9])?)+(\/[^?#\s]*)?$/i;
+
+  // Parse a user host entry into { host, path }. Returns null if malformed.
+  // `path` includes the leading "/" or is "" for hostname-only entries.
+  function parseHostEntry(entry) {
+    if (typeof entry !== "string") return null;
+    const trimmed = entry.trim().toLowerCase();
+    if (!HOST_ENTRY_RE.test(trimmed)) return null;
+    const slash = trimmed.indexOf("/");
+    if (slash === -1) return { host: trimmed, path: "" };
+    return { host: trimmed.slice(0, slash), path: trimmed.slice(slash) };
+  }
+
+  // Convert a user host entry to a Chrome/Firefox match pattern. The trailing
+  // "/*" is appended so a path entry like "github.com/myorg" matches everything
+  // under that prefix. Returns null if the entry is malformed.
+  function hostEntryToMatchPattern(entry) {
+    const parsed = parseHostEntry(entry);
+    if (!parsed) return null;
+    let path = parsed.path;
+    if (path.endsWith("*")) path = path.slice(0, -1);
+    if (path.endsWith("/")) path = path.slice(0, -1);
+    return path === ""
+      ? `*://${parsed.host}/*`
+      : `*://${parsed.host}${path}/*`;
+  }
+
   function dedupeHosts(list) {
     const seen = new Set();
     const out = [];
@@ -118,12 +150,20 @@
   global.BackrefConfig = {
     DEFAULT_CONFIG,
     loadEffectiveConfig,
-    mergeConfig
+    mergeConfig,
+    parseHostEntry,
+    hostEntryToMatchPattern
   };
 
   // Make pure helpers importable from Node so they can be unit-tested.
   // Browser/service-worker contexts have no `module`, so this is a no-op there.
   if (typeof module !== "undefined" && module.exports) {
-    module.exports = { DEFAULT_CONFIG, loadEffectiveConfig, mergeConfig };
+    module.exports = {
+      DEFAULT_CONFIG,
+      loadEffectiveConfig,
+      mergeConfig,
+      parseHostEntry,
+      hostEntryToMatchPattern
+    };
   }
 })(typeof self !== "undefined" ? self : globalThis);

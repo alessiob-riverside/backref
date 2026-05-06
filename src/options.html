@@ -16,16 +16,18 @@
       <section>
         <h2>Hosts</h2>
         <p class="muted">
-          Hostnames where the extension should run. Adding a host triggers a
-          Chrome permission prompt — you must accept it for the extension to
-          activate on that host. <code>github.com</code> works out of the box.
+          Hostnames (or hostname/path) where the extension should run. Adding
+          a host triggers a Chrome permission prompt — you must accept it for
+          the extension to activate on that host. Examples:
+          <code>github.com</code>, <code>github.com/myorg</code>.
+          <code>github.com</code> works out of the box.
         </p>
         <ul id="host-list" class="chip-list" aria-label="Configured hosts"></ul>
         <div class="row" id="host-input-row">
           <input
             type="text"
             id="host-input"
-            placeholder="github.acme.com"
+            placeholder="github.com/myorg"
             autocomplete="off"
           />
           <button id="add-host" type="button">Add host</button>
@@ -55,6 +57,33 @@
           <span>Open links in a new tab</span>
         </label>
         <p id="behavior-policy-note" class="policy-note" hidden></p>
+      </section>
+
+      <section>
+        <h2>Configuration JSON</h2>
+        <p class="muted">
+          Import or export your settings as JSON — useful for debugging or
+          handing off to a Chrome Enterprise admin.
+          <strong>Export user config</strong> shows what's saved for you.
+          <strong>Copy as managed policy</strong> emits the
+          <code>chrome.storage.managed</code> shape (the effective config plus
+          <code>lockRules</code> / <code>lockHosts</code> flags) ready for
+          enterprise deployment.
+        </p>
+        <textarea
+          id="config-json"
+          class="json-text"
+          rows="14"
+          spellcheck="false"
+          autocomplete="off"
+          aria-label="Configuration JSON"
+        ></textarea>
+        <div class="row">
+          <button id="json-import" type="button">Import</button>
+          <button id="json-export" type="button">Export user config</button>
+          <button id="json-copy-policy" type="button">Copy as managed policy</button>
+        </div>
+        <p id="json-error" class="error" hidden></p>
       </section>
 
       <footer>

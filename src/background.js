@@ -15,17 +15,11 @@ if (typeof BackrefConfig === "undefined" && typeof importScripts === "function")
 const SCRIPT_ID = "ghst-content";
 const CONTENT_FILES = ["src/config.js", "src/content.js"];
 
-function hostsToMatches(hosts) {
-  return (hosts || [])
-    .map(h => h.trim())
-    .filter(Boolean)
-    .map(h => `*://${h}/*`);
-}
-
 async function grantedMatches(hosts) {
   const granted = [];
   for (const h of hosts || []) {
-    const origin = `*://${h}/*`;
+    const origin = self.BackrefConfig.hostEntryToMatchPattern(h);
+    if (!origin) continue;
     try {
       const ok = await chrome.permissions.contains({ origins: [origin] });
       if (ok) granted.push(origin);
