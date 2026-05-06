@@ -69,4 +69,4 @@ Issues and PRs welcome. The codebase is small — `src/content.js` does the DOM 
 
 ## License
 
-<!-- TODO add a LICENSE file before announcing the repo. MIT and Apache-2.0 are common picks for browser extensions. -->
+[MIT](LICENSE)
