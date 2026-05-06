@@ -118,7 +118,7 @@ Deployment paths:
 
 **Background context.** Chrome MV3 uses a service worker (`background.service_worker`); Firefox MV3 uses an event page (`background.scripts`). Our `src/background.js` doesn't use service-worker-specific features (no `self.addEventListener("install")`, no `event.waitUntil`), so it works in both contexts. Don't add such APIs without guarding for Firefox.
 
-**AMO submission requires a unique `browser_specific_settings.gecko.id`.** The current value in `manifests/firefox.json` is a placeholder.
+**AMO `browser_specific_settings.gecko.id`** is set to `{25afe7bb-f9fb-4b6b-a2ef-43bd2ce6877d}` in `manifests/firefox.json`. The id is permanent once published; forks should regenerate (e.g. `uuidgen`).
 
 ## Adding behaviors
 

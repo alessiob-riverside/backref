@@ -5,7 +5,7 @@
   "version": "0.1.0",
   "browser_specific_settings": {
     "gecko": {
-      "id": "backref@yourdomain.example",
+      "id": "{25afe7bb-f9fb-4b6b-a2ef-43bd2ce6877d}",
       "strict_min_version": "128.0"
     }
   },
