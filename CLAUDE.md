@@ -57,7 +57,10 @@ After config changes, links update on the next page navigation; the storage list
 ```js
 {
   rules: [
-    { regex: "\\b[A-Z]+-[0-9]+\\b", template: "https://linear.app/your-org/issue/{id}/" }
+    { regex: "\\b[A-Z]+-[0-9]+\\b", template: "https://linear.app/your-org/issue/{id}/" },
+    // optional per-rule scope: only fire on URLs matching one of these entries
+    { regex: "\\bZD-[0-9]+\\b", template: "https://acme.zendesk.com/agent/tickets/{id}",
+      hosts: ["linear.app/acme"] }
   ],
   openInNewTab: true,
   hosts: ["github.com"]
@@ -65,7 +68,9 @@ After config changes, links update on the next page navigation; the storage list
 ```
 
 - `rules[].regex` is a JS regex source string. The whole match is the link text — capture groups are ignored. `{id}` in the template is replaced with the URL-encoded match.
-- `hosts` are bare hostnames or hostname/path entries (e.g. `github.com`, `github.com/myorg`). `hostEntryToMatchPattern` in `src/config.js` normalizes them to `*://<host>/*` or `*://<host>/<path>/*` match patterns. The default `github.com` is covered by manifest `host_permissions`; additional hosts go through `chrome.permissions.request` from the options page (must be a user gesture). Path-scoped entries that fall under an already-granted host don't trigger a new prompt — `permissions.contains` is satisfied by the broader granted pattern.
+- `rules[].hosts` is **optional**. When missing or empty, the rule is global — it fires on every URL the extension is active on. When set, the rule only fires on URLs matching one of those entries (same hostname/path syntax as top-level `hosts`). URL filtering happens in `findRuleForMatch` in `src/content.js` via `urlMatchesAnyHostEntry`. The combined regex still ORs all rules together for one fast pass; URL filtering is a cheap per-match check after.
+- `hosts` (top-level) are bare hostnames or hostname/path entries (e.g. `github.com`, `github.com/myorg`). `hostEntryToMatchPattern` in `src/config.js` normalizes them to `*://<host>/*` or `*://<host>/<path>/*` match patterns. The default `github.com` is covered by manifest `host_permissions`; additional hosts go through `chrome.permissions.request` from the options page (must be a user gesture). Path-scoped entries that fall under an already-granted host don't trigger a new prompt — `permissions.contains` is satisfied by the broader granted pattern.
+- **Top-level `hosts` and `rules[].hosts` interact at registration time.** `src/background.js` registers content scripts on the *union* of both, so a rule scoped to a host outside top-level Hosts still fires (provided the host is permitted). The options page's Save handler auto-expands top-level Hosts to cover any new per-rule hosts, batching a single permission prompt. Effect: top-level `hosts` is permissive (a baseline); the per-rule `hosts` field is sufficient to register and run the rule on a new host. This also keeps the JSON format forward-compatible with a future refactor where top-level Hosts is dropped from the user-facing UI.
 
 ## Managed storage (enterprise policy)
 

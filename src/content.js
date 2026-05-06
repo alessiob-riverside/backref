@@ -24,7 +24,8 @@
       if (!r || !r.regex || !r.template) continue;
       try {
         const compiled = new RegExp(`^(?:${r.regex})$`);
-        valid.push({ regex: r.regex, template: r.template, compiled });
+        const hosts = Array.isArray(r.hosts) ? r.hosts.slice() : null;
+        valid.push({ regex: r.regex, template: r.template, hosts, compiled });
       } catch (_e) {
         // skip invalid regex
       }
@@ -40,8 +41,11 @@
   }
 
   function findRuleForMatch(matchText) {
+    const url = location.href;
     for (const r of compiledRules) {
-      if (r.compiled.test(matchText)) return r;
+      if (!r.compiled.test(matchText)) continue;
+      if (!self.BackrefConfig.urlMatchesAnyHostEntry(url, r.hosts)) continue;
+      return r;
     }
     return null;
   }

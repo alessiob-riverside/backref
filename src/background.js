@@ -40,7 +40,19 @@ async function doSync() {
     // not registered yet — ignore
   }
 
-  const matches = await grantedMatches(config.hosts);
+  // Union of top-level hosts and any per-rule "Active on" hosts. The latter
+  // ensures a rule scoped to a host outside top-level Hosts still fires
+  // (provided the host has been granted permission). It also makes a future
+  // "drop top-level Hosts entirely" refactor a no-op for users whose rules
+  // already carry their own scope.
+  const hostSet = new Set(config.hosts);
+  for (const r of config.rules || []) {
+    if (Array.isArray(r.hosts)) {
+      for (const h of r.hosts) hostSet.add(h);
+    }
+  }
+
+  const matches = await grantedMatches([...hostSet]);
   if (matches.length === 0) return;
 
   try {

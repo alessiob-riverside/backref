@@ -80,6 +80,37 @@
       : `*://${parsed.host}${path}/*`;
   }
 
+  // True if the given URL falls within the given host entry. Path comparison is
+  // case-insensitive: GitHub's org/repo paths are effectively case-insensitive
+  // and matching that user expectation matters more than HTTP-spec strictness.
+  function urlMatchesHostEntry(url, entry) {
+    const parsed = parseHostEntry(entry);
+    if (!parsed) return false;
+    let u;
+    try {
+      u = new URL(url);
+    } catch (_e) {
+      return false;
+    }
+    if (u.hostname.toLowerCase() !== parsed.host) return false;
+    if (parsed.path === "") return true;
+    let path = parsed.path;
+    if (path.endsWith("*")) path = path.slice(0, -1);
+    if (path.endsWith("/")) path = path.slice(0, -1);
+    const urlPath = u.pathname.toLowerCase();
+    return urlPath === path || urlPath.startsWith(path + "/");
+  }
+
+  // True if `entries` is empty/missing (treated as "no filter, applies
+  // everywhere") or any entry matches the URL.
+  function urlMatchesAnyHostEntry(url, entries) {
+    if (!Array.isArray(entries) || entries.length === 0) return true;
+    for (const e of entries) {
+      if (urlMatchesHostEntry(url, e)) return true;
+    }
+    return false;
+  }
+
   function dedupeHosts(list) {
     const seen = new Set();
     const out = [];
@@ -152,7 +183,9 @@
     loadEffectiveConfig,
     mergeConfig,
     parseHostEntry,
-    hostEntryToMatchPattern
+    hostEntryToMatchPattern,
+    urlMatchesHostEntry,
+    urlMatchesAnyHostEntry
   };
 
   // Make pure helpers importable from Node so they can be unit-tested.
@@ -163,7 +196,9 @@
       loadEffectiveConfig,
       mergeConfig,
       parseHostEntry,
-      hostEntryToMatchPattern
+      hostEntryToMatchPattern,
+      urlMatchesHostEntry,
+      urlMatchesAnyHostEntry
     };
   }
 })(typeof self !== "undefined" ? self : globalThis);
