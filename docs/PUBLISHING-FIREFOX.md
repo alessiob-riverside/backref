@@ -20,21 +20,12 @@ To pick up code changes, run the build again and click **Reload** in `about:debu
 
 ## 2. addons.mozilla.org (AMO) — listed or unlisted
 
-Firefox's official add-on store. The `browser_specific_settings.gecko.id` in `manifests/firefox.json` is the extension's stable identifier and **must be set to a value you control** before submitting — the placeholder `backref@yourdomain.example` will not pass review.
+Firefox's official add-on store. The `browser_specific_settings.gecko.id` in `manifests/firefox.json` is the extension's stable identifier — it's permanent once published, so a fork that wants its own listing should change it before submitting.
 
 ### Prerequisites
 
 - A free Mozilla account at <https://addons.mozilla.org/developers/>.
-- A unique gecko id. Update `manifests/firefox.json`:
-  ```json
-  "browser_specific_settings": {
-    "gecko": {
-      "id": "backref@yourdomain.example",
-      "strict_min_version": "128.0"
-    }
-  }
-  ```
-  The id is a string in `name@domain` form (or a UUID in braces). Use a domain you actually own.
+- A unique gecko id (already set to `{25afe7bb-f9fb-4b6b-a2ef-43bd2ce6877d}` in `manifests/firefox.json`). The id format is either `name@domain` or a UUID in braces; Mozilla doesn't validate domain ownership but the id must be unique on AMO. Forks should generate their own UUID with `uuidgen`.
 - Icons. The repo includes 16/48/128 px PNGs in `icons/`, wired up in `manifests/firefox.json`. Replace before publishing if needed.
 
 ### Package
@@ -79,7 +70,7 @@ For managed Firefox deployments (Firefox ESR is common in enterprises).
    {
      "policies": {
        "ExtensionSettings": {
-         "backref@yourdomain.example": {
+         "{25afe7bb-f9fb-4b6b-a2ef-43bd2ce6877d}": {
            "installation_mode": "force_installed",
            "install_url": "https://your-host.example/backref.xpi"
          }
@@ -95,7 +86,7 @@ Bump `version` in `manifests/firefox.json` for every AMO submission. AMO rejects
 
 ## Pre-release checklist
 
-- gecko id in `manifests/firefox.json` is a real, owned domain — not the placeholder `@yourdomain.example`.
+- gecko id in `manifests/firefox.json` is set (currently `{25afe7bb-f9fb-4b6b-a2ef-43bd2ce6877d}`). Forks should generate their own.
 - Default rule template in `src/background.js` (`DEFAULT_CONFIG`) and `src/options.js` (`DEFAULT_CONFIG`) — currently `https://example.com/issue/{id}` — points somewhere real, or the README explains it's a placeholder.
 - Version bumped in `manifests/firefox.json`.
 - Icons in `icons/` are the final ones, not placeholders.
