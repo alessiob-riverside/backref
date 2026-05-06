@@ -17,9 +17,6 @@
   "permissions": ["storage", "scripting"],
   "host_permissions": ["*://github.com/*"],
   "optional_host_permissions": ["*://*/*"],
-  "storage": {
-    "managed_schema": "src/schema.json"
-  },
   "background": {
     "scripts": ["src/config.js", "src/background.js"]
   },

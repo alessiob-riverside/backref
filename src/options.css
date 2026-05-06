@@ -239,3 +239,16 @@ label.row {
   background: #eef1f4;
   color: var(--muted);
 }
+
+textarea.json-text {
+  width: 100%;
+  padding: 10px 12px;
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, "Cascadia Mono",
+    monospace;
+  font-size: 12.5px;
+  line-height: 1.45;
+  resize: vertical;
+  background: #fafbfc;
+}
