@@ -267,6 +267,40 @@ async function save() {
     setStatus(err);
     return;
   }
+
+  // Auto-expand top-level Hosts to cover any per-rule "Active on" entries.
+  // Without this, a rule scoped to a host that isn't in Hosts would never fire,
+  // because the content script wouldn't be registered there.
+  let permissionWarning = null;
+  const referenced = new Set();
+  for (const r of state.rules) {
+    if (Array.isArray(r.hosts)) {
+      for (const h of r.hosts) referenced.add(h);
+    }
+  }
+  const newHosts = [...referenced].filter(
+    h => !state.hosts.includes(h) && !state.managed.hosts.includes(h)
+  );
+  if (newHosts.length > 0) {
+    const origins = newHosts.map(hostEntryToMatchPattern).filter(Boolean);
+    let granted = false;
+    try {
+      granted = await chrome.permissions.request({ origins });
+    } catch (e) {
+      setStatus(`Permission request failed: ${e.message}`);
+      return;
+    }
+    if (granted) {
+      for (const h of newHosts) {
+        if (!state.hosts.includes(h)) state.hosts.push(h);
+      }
+      renderHosts();
+    } else {
+      permissionWarning =
+        "Saved, but permission was denied for some hosts referenced by rules — those rules won't fire until you grant access.";
+    }
+  }
+
   // Persist only user fields. openInNewTab is omitted when policy-controlled.
   const config = {
     rules: state.rules.map(ruleForStorage),
@@ -278,7 +312,7 @@ async function save() {
     config.openInNewTab = state.openInNewTab;
   }
   await chrome.storage.sync.set({ config });
-  setStatus("Saved.");
+  setStatus(permissionWarning || "Saved.");
 }
 
 async function load() {
