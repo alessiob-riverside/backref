@@ -125,7 +125,9 @@ Deployment paths:
 - **Skip a region** that's accidentally being processed: tighten a target selector or add an early-out in `processContainer` based on an ancestor class.
 - **Process more regions** (e.g. issue titles): add the selector to `TARGET_SELECTORS` and verify GitHub's markup with the inspector. Be wary of regions that are themselves inside `<a>` (commit messages in a commit list, for instance) — the ancestor-is-link check will skip them, which may or may not be what you want.
 - **Capture-group support in templates** (`$1`, `$2`): would require switching `findRuleForMatch` to track which alternation branch matched and re-running that rule's regex on the match. Currently out of scope to keep templates simple.
-- **Per-host rules**: not supported. All rules apply on all configured hosts.
+- **Per-host rules**: supported via the optional `rules[].hosts` field. See the "Config schema" section.
+
+- **Support a non-GitHub forge** (Bitbucket, GitLab, Gitea, self-hosted instances): the click/hover/cursor work in `src/content.js` is host-agnostic — it only inspects `.ghst-link` elements. The DOM scanning, however, is GitHub-specific via `TARGET_SELECTORS`. To extend, add the equivalent class names to `TARGET_SELECTORS` (e.g. Bitbucket's `.code-line` / `.bb-rendered`, GitLab's `.code` / `.md`). For a more general fix, expose `targetSelectors` as a config field with per-host overrides — same shape as `rules[].hosts` — so an admin shipping Backref to a Bitbucket-only org can override the GitHub default. See "Known limitations" below.
 
 ## Testing
 
@@ -141,4 +143,6 @@ There is no automated test suite. Manual verification:
 
 - Regexes are user-supplied and can produce false positives (`[A-Z]+-[0-9]+` would match `GET-200` in code). The default rule includes `\b` boundaries; users can refine.
 - The set of target selectors is a best-effort match against current GitHub markup. GitHub ships new UI shells periodically (e.g. the React-based blob view) and may change classes; the selectors are the first place to look when something stops working.
+
+- **GitHub-only DOM scanning.** `TARGET_SELECTORS` is hardcoded to GitHub's class names. The extension can be configured to run on Bitbucket, GitLab, or self-hosted forges (host list + per-rule scoping handle the registration), but it will appear to do nothing because the selectors don't match anything there. Future improvement: turn `targetSelectors` into a config field with per-host overrides (default: the GitHub set). Until that lands, supporting a new forge means adding its selectors to `TARGET_SELECTORS` in `src/content.js`.
 - Icons in `icons/` are downscaled from a 128×128 source. For a polished release, redraw at 16/48/128 (or render from a 1024 master) so the small sizes stay crisp.
