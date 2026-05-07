@@ -1,5 +1,8 @@
 # Backref
 
+[![Chrome Web Store](https://img.shields.io/chrome-web-store/v/mikabafbdpidimofjjekgjplenpopgbb?label=Chrome%20Web%20Store&logo=googlechrome&logoColor=white&color=4285f4)](https://chromewebstore.google.com/detail/mikabafbdpidimofjjekgjplenpopgbb)
+[![Firefox Add-on](https://img.shields.io/badge/Firefox%20Add--on-under%20review-lightgrey?logo=firefoxbrowser&logoColor=white)](https://addons.mozilla.org/)
+
 Browser extension that turns bug-tracker IDs on GitHub pages into clickable links — across code comments, PR/issue descriptions, comments, and commit messages.
 
 You define rules (regex + URL template) in the extension's options page. Every match becomes a link to your tracker. Already-linked text is left alone.
@@ -15,9 +18,8 @@ Available for **Chrome** and **Firefox** (Manifest V3).
 
 ## Install
 
-<!-- TODO add Chrome Web Store and AMO listing links once published -->
-
-For now, install from source — see [Build locally](#build-locally) below.
+- **Chrome / Chromium / Edge / Brave / Arc**: [Install from the Chrome Web Store](https://chromewebstore.google.com/detail/mikabafbdpidimofjjekgjplenpopgbb).
+- **Firefox**: under review on [addons.mozilla.org](https://addons.mozilla.org). Until the listing is published, install from source — see [Build locally](#build-locally).
 
 ## Configure
 
