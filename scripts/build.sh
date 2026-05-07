@@ -36,6 +36,9 @@ build_one() {
     cp -R "$ROOT/icons" "$out/"
   fi
   cp "$manifest" "$out/manifest.json"
+  # Strip macOS metadata files. AMO's validator flags .DS_Store as
+  # an unintentional inclusion; .cp -R copies them in if they exist.
+  find "$out" -name ".DS_Store" -delete
 }
 
 package_one() {
