@@ -26,6 +26,7 @@ Firefox's official add-on store. The `browser_specific_settings.gecko.id` in `ma
 
 - A free Mozilla account at <https://addons.mozilla.org/developers/>.
 - A unique gecko id (already set to `{25afe7bb-f9fb-4b6b-a2ef-43bd2ce6877d}` in `manifests/firefox.json`). The id format is either `name@domain` or a UUID in braces; Mozilla doesn't validate domain ownership but the id must be unique on AMO. Forks should generate their own UUID with `uuidgen`.
+- `data_collection_permissions` declared inside `browser_specific_settings.gecko`. AMO's automated validator rejects submissions without it. Backref doesn't collect anything (DOM reads stay local, storage is local), so the manifest declares `{"required": ["none"]}`. If you ever start collecting data — telemetry, analytics, anything network — update this list per <https://extensionworkshop.com/documentation/develop/data-collection-disclosures/>.
 - Icons. The repo includes 16/48/128 px PNGs in `icons/`, wired up in `manifests/firefox.json`. Replace before publishing if needed.
 
 ### Package
