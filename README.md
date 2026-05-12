@@ -1,7 +1,7 @@
 # Backref
 
 [![Chrome Web Store](https://img.shields.io/chrome-web-store/v/mikabafbdpidimofjjekgjplenpopgbb?label=Chrome%20Web%20Store&logo=googlechrome&logoColor=white&color=4285f4)](https://chromewebstore.google.com/detail/mikabafbdpidimofjjekgjplenpopgbb)
-[![Firefox Add-on](https://img.shields.io/badge/Firefox%20Add--on-under%20review-lightgrey?logo=firefoxbrowser&logoColor=white)](https://addons.mozilla.org/)
+[![Firefox Add-on](https://img.shields.io/amo/v/backref?label=Firefox%20Add-on&logo=firefoxbrowser&logoColor=white&color=ff7139)](https://addons.mozilla.org/en-US/firefox/addon/backref/)
 
 Browser extension that turns bug-tracker IDs on GitHub pages into clickable links — across code comments, PR/issue descriptions, comments, and commit messages.
 
@@ -19,7 +19,7 @@ Available for **Chrome** and **Firefox** (Manifest V3).
 ## Install
 
 - **Chrome / Chromium / Edge / Brave / Arc**: [Install from the Chrome Web Store](https://chromewebstore.google.com/detail/mikabafbdpidimofjjekgjplenpopgbb).
-- **Firefox**: under review on [addons.mozilla.org](https://addons.mozilla.org). Until the listing is published, install from source — see [Build locally](#build-locally).
+- **Firefox**: [Install from addons.mozilla.org](https://addons.mozilla.org/en-US/firefox/addon/backref/).
 
 ## Configure
 
